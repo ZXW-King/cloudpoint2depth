@@ -4,12 +4,54 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/types.hpp>
 #include <eigen3/Eigen/Dense>
+#include <unistd.h>
 
 double camera_factor = 100;
 double camera_cx = 285.22;// = 325.5;
 double camera_cy = 285.22;// = 253.5;
 double camera_fx = 316.045;// = 518.0;
 double camera_fy = 316.045;// = 519.0;
+
+#define ERROR_PRINT(x) std::cout << "" << (x) << "" << std::endl
+
+bool ReadFile(std::string srcFile, std::vector<std::string> &image_files) {
+    if (not access(srcFile.c_str(), 0) == 0) {
+        ERROR_PRINT("no such File (" + srcFile + ")");
+        return false;
+    }
+
+    std::ifstream fin(srcFile.c_str());
+
+    if (!fin.is_open()) {
+        ERROR_PRINT("read file error (" + srcFile + ")");
+        return false;
+    }
+
+    std::string s;
+    while (getline(fin, s)) {
+        image_files.push_back(s);
+    }
+
+    fin.close();
+
+    return true;
+}
+
+void GetImageData(const std::string inputDir, std::vector<std::string> &dataset) {
+    std::string imagesTxt = inputDir + "/image_paths.txt";
+    std::vector<std::string> imageNameList;
+
+    if (not ReadFile(imagesTxt, imageNameList)) exit(0);
+    const size_t size =
+            imageNameList.size() > 0 ? imageNameList.size() : 0;
+
+    for (size_t i = 0; i < size; ++i) {
+        std::string imagePath = inputDir + "/" + imageNameList.at(i);
+        dataset.push_back(imagePath);
+    }
+}
+
+
 
 void Depth2PointCloud(const cv::Mat &depth, std::vector<Eigen::Vector3d> &cloud) {
     for (int m = 0; m < depth.rows; m++)
@@ -59,17 +101,33 @@ void PointCloud2Depth(const std::vector<Eigen::Vector3d>& pointCloud, cv::Mat& d
     }
 }
 
-int main(){
-    std::string image = "/media/xin/data1/data/parker_data_2023_08_22/result/CREStereo_MiDaS/CREStereo_big_object_100_tof/scale_tof/louti/data_2023_0822_2/20210223_1355/cam0/14_1614045310895639.png";
-    cv::Mat depthImage = cv::imread(image, -1);
-//    cv::imshow("image",depthImage);
-    int width = depthImage.cols;
-    int height = depthImage.rows;
-    std::vector<Eigen::Vector3d> cloudPoints;
-    Depth2PointCloud(depthImage,cloudPoints);
-    cv::Mat resDepth;
-    PointCloud2Depth(cloudPoints,resDepth,width,height);
-    cv::imshow("res",resDepth);
-    cv::imwrite("/media/xin/data1/test_data/depth_cloudpoint_test/no_100.png",resDepth);
-    cv::waitKey();
+int main(int argc, char *argv[]){
+    if (argc < 2) {
+        std::cout << "参数不足！请提供路径和有效数据！" << std::endl;
+        return 1;
+    }
+    std::string inputDir = argv[1];
+    std::string saveDir = argv[2];
+    std::vector<std::string> dataset;
+    GetImageData(inputDir, dataset);
+    const size_t size = dataset.size();
+    for (size_t i = 0; i < size; ++i)
+    {
+        std::string imagePath = dataset.at(i);
+        std::cout << imagePath << std::endl;
+        cv::Mat depthImage = cv::imread(imagePath, -1);
+        int width = depthImage.cols;
+        int height = depthImage.rows;
+        std::vector<Eigen::Vector3d> cloudPoints;
+        Depth2PointCloud(depthImage,cloudPoints);
+        cv::Mat resDepth;
+        PointCloud2Depth(cloudPoints,resDepth,width,height);
+        size_t lastSlashPos = imagePath.find_last_of("/\\"); // 查找最后一个路径分隔符的位置
+        std::string fileName = imagePath.substr(lastSlashPos + 1);
+        std::string imageSave_path = saveDir + "/" + std::to_string(i) + "_" + fileName;
+        cv::imwrite(imageSave_path,resDepth);
+//        cv::imshow("res",resDepth);
+//        cv::waitKey();
+    }
+    return 0;
 }
