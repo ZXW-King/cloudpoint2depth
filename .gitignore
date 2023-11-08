@@ -1,0 +1,14 @@
+*.user
+### VSCode
+.vscode/
+.tags/
+*build*/
+model/
+.idea/
+.nn_sdk.h.swp
+build/
+install/
+sample/*.txt
+*.gpu
+*.npu
+.clion.source.upload.marker
