@@ -10,6 +10,10 @@
 #include "include/Resolution.h"
 #include "include/utils.h"
 #include "include/CameraMoudleParam.h"
+#include <numeric>
+#include <pcl/point_types.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/visualization/pcl_visualizer.h>
 
 #define EXIST(file) (access((file).c_str(), 0) == 0)
 double camera_factor = 100;
@@ -21,21 +25,25 @@ double camera_fy;
 #define ERROR_PRINT(x) std::cout << "" << (x) << "" << std::endl
 const psl::Resolution RESOLUTION = psl::Resolution::RES_640X400;
 
-bool ReadFile(std::string srcFile, std::vector<std::string> &image_files) {
-    if (not access(srcFile.c_str(), 0) == 0) {
+bool ReadFile(std::string srcFile, std::vector<std::string> &image_files)
+{
+    if (not access(srcFile.c_str(), 0) == 0)
+    {
         ERROR_PRINT("no such File (" + srcFile + ")");
         return false;
     }
 
     std::ifstream fin(srcFile.c_str());
 
-    if (!fin.is_open()) {
+    if (!fin.is_open())
+    {
         ERROR_PRINT("read file error (" + srcFile + ")");
         return false;
     }
 
     std::string s;
-    while (getline(fin, s)) {
+    while (getline(fin, s))
+    {
         image_files.push_back(s);
     }
 
@@ -44,7 +52,8 @@ bool ReadFile(std::string srcFile, std::vector<std::string> &image_files) {
     return true;
 }
 
-void GetImageData(const std::string inputDir, std::vector<std::string> &dataset) {
+void GetImageData(const std::string inputDir, std::vector<std::string> &dataset)
+{
     std::string imagesTxt = inputDir + "/image_paths.txt";
     std::vector<std::string> imageNameList;
 
@@ -52,17 +61,19 @@ void GetImageData(const std::string inputDir, std::vector<std::string> &dataset)
     const size_t size =
             imageNameList.size() > 0 ? imageNameList.size() : 0;
 
-    for (size_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i)
+    {
         std::string imagePath = inputDir + "/" + imageNameList.at(i);
         dataset.push_back(imagePath);
     }
 }
 
 
-
-void Depth2PointCloud(const cv::Mat &depth, std::vector<Eigen::Vector3d> &cloud) {
+void Depth2PointCloud(const cv::Mat &depth, std::vector<Eigen::Vector3d> &cloud)
+{
     for (int m = 0; m < depth.rows; m++)
-        for (int n = 0; n < depth.cols; n++) {
+        for (int n = 0; n < depth.cols; n++)
+        {
             unsigned short d = depth.ptr<uint16_t>(m)[n];
 //            d = d / 100;
 
@@ -84,15 +95,12 @@ void Depth2PointCloud(const cv::Mat &depth, std::vector<Eigen::Vector3d> &cloud)
 }
 
 
-void PointCloud2Depth(const std::vector<Eigen::Vector3d>& pointCloud, cv::Mat& depthImage, int width, int height)
+void PointCloud2Depth(const std::vector<Eigen::Vector3d> &pointCloud, cv::Mat &depthImage, int width, int height)
 {
     // 创建深度图像
     depthImage = cv::Mat::zeros(height, width, CV_16U);
-
-    int i = 0;
-    int j = 0;
     // 遍历点云数据
-    for (const auto& point : pointCloud)
+    for (const auto &point: pointCloud)
     {
         // 计算深度值
         double x = point.x();
@@ -104,20 +112,11 @@ void PointCloud2Depth(const std::vector<Eigen::Vector3d>& pointCloud, cv::Mat& d
         // 更新深度图像
         if (u >= 0 && u < width && v >= 0 && v < height)
         {
-            i++;
-            unsigned short depthValue = static_cast<unsigned short>(z * camera_factor*10); // 假设深度单位为米，转换为厘米
+            unsigned short depthValue = static_cast<unsigned short>(z * camera_factor * 100); // 假设深度单位为米，转换为厘米
             depthImage.at<uint16_t>(v, u) = depthValue;
-        } else{
-            std::cout << "u:" << u << std::endl;
-            std::cout << "v:" << v << std::endl;
-            j++;
         }
-
     }
-    std::cout << "i:" << i << std::endl;
-    std::cout << "j:" << j << std::endl;
 }
-
 void ReadArray(const YAML::Node &config, std::vector<float> &array)
 {
     try
@@ -169,7 +168,7 @@ bool GetYamlPointCloud(std::string yamlFile, PointCloudData &pointCloud)
         int p = 0;
         for (int i = 0; i < 448 * 80; i++)
         {
-            pointCloud.pointData.push_back(Eigen::Vector3d(data[p++],data[p++],data[p++]));
+            pointCloud.pointData.push_back(Eigen::Vector3d(data[p++], data[p++], data[p++]));
         }
 
         return true;
@@ -218,7 +217,7 @@ bool ReadSyncFile(std::string srcFile, std::vector<SyncDataFile> &files, const b
     return true;
 }
 
-bool GetData(const std::string inputDir, std::vector<SyncDataFile>& dataset, const bool &flag)
+bool GetData(const std::string inputDir, std::vector<SyncDataFile> &dataset, const bool &flag)
 {
     std::string imagesTxt = inputDir + "/image.txt";
     std::string lidarTxt = inputDir + "/lidar.txt";
@@ -232,8 +231,7 @@ bool GetData(const std::string inputDir, std::vector<SyncDataFile>& dataset, con
     if (synced)
     {
         if (not ReadSyncFile(syncTxt, fileList, flag)) exit(0);
-    }
-    else
+    } else
     {
         if (not ReadFile(imagesTxt, imageNameList)) exit(0);
         if (not ReadFile(lidarTxt, lidarNameList)) exit(0);
@@ -254,8 +252,7 @@ bool GetData(const std::string inputDir, std::vector<SyncDataFile>& dataset, con
                 binocular = true;
                 item.AddCam01Path();
             }
-        }
-        else
+        } else
         {
             item.imageLeft = inputDir + "/" + imageNameList.at(i);
             item.lidar = inputDir + "/" + lidarNameList[i];
@@ -270,10 +267,12 @@ bool GetData(const std::string inputDir, std::vector<SyncDataFile>& dataset, con
     return binocular;
 }
 
-bool GetCameraConfig(std::string file, psl::CameraMoudleParam &param) {
+bool GetCameraConfig(std::string file, psl::CameraMoudleParam &param)
+{
     cv::FileStorage fileStream = cv::FileStorage(file, cv::FileStorage::READ);
 
-    if (not fileStream.isOpened()) {
+    if (not fileStream.isOpened())
+    {
         ERROR_PRINT("file not exist <" + file + ">");
         return false;
     }
@@ -307,7 +306,8 @@ bool GetCameraConfig(std::string file, psl::CameraMoudleParam &param) {
 }
 
 
-void GetPointCloud(cv::Mat image,std::vector<Eigen::Vector3d>& pointCloud){
+void GetPointCloud(cv::Mat image, std::vector<Eigen::Vector3d> &pointCloud)
+{
     // 获取图像尺寸
     int rows = image.rows;
     int cols = image.cols;
@@ -318,23 +318,63 @@ void GetPointCloud(cv::Mat image,std::vector<Eigen::Vector3d>& pointCloud){
         for (int j = 0; j < cols; ++j)
         {
             // 获取像素值
-            cv::Vec3b pixel = image.at<cv::Vec3b>(i, j);
+            cv::Vec3f pixel = image.at<cv::Vec3f>(i, j);
 
             // 分别获取三个通道的值
-            double blue = pixel[0];
-            double green = pixel[1];
-            double red = pixel[2];
-//            if (blue != 255 || green != 255 || red != 255){
+            float blue = pixel[0];
+            float green = pixel[1];
+            float red = pixel[2];
+//            if (std::isnan(blue) || std::isnan(green) || std::isnan(red))
+//            {
 //                std::cout << pixel << std::endl;
 //                continue;
 //            }
-            pointCloud.push_back(Eigen::Vector3d(pixel[0],pixel[1],pixel[2]));
+            pointCloud.push_back(Eigen::Vector3d(pixel[0], pixel[1], pixel[2]));
         }
     }
 }
 
-int main(int argc, char *argv[]){
-    if (argc < 2) {
+void Show3DPointCloud(std::string &yamlFilePath)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    std::string yamlFile = yamlFilePath;
+    cv::FileStorage fileStorageRead = cv::FileStorage(yamlFile, cv::FileStorage::READ);
+    cv::Mat imageTT;
+    fileStorageRead["depth"] >> imageTT;
+    for (int i = 0; i < imageTT.rows; ++i)
+    {
+        for (int j = 0; j < imageTT.cols; ++j)
+        {
+            // 获取像素值
+            cv::Vec3f pixel = imageTT.at<cv::Vec3f>(i, j);
+            cloud->push_back(pcl::PointXYZ(pixel[0], pixel[1], pixel[2]));
+        }
+    }
+
+    // 可视化点云
+    pcl::visualization::PCLVisualizer viewer("3D Viewer");
+    viewer.setBackgroundColor(0.0, 0.0, 0.0);
+
+    viewer.setRepresentationToWireframeForAllActors(); // 设置线框模式
+
+    viewer.addPointCloud<pcl::PointXYZ>(cloud, "sample cloud");
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
+
+    viewer.addCoordinateSystem(0.2); // 添加坐标轴
+
+    viewer.initCameraParameters();
+
+    while (!viewer.wasStopped())
+    {
+        viewer.spinOnce();
+    }
+}
+
+
+int main(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
         std::cout << "参数不足！请提供路径和有效数据！" << std::endl;
         return 1;
     }
@@ -353,25 +393,32 @@ int main(int argc, char *argv[]){
     for (size_t i = 1; i < size; ++i)
     {
         SyncDataFile item = dataset.at(i);
-        std::string imagePath(item.imageLeft);
-        std::cout << imagePath << std::endl;
+//        std::string imagePath(item.imageLeft);
+        std::string imagePath = "/media/xin/data1/data/data_2023_11_21/data_2023_11_21_1/20231121_1145/cam0/53_1700538353654779.jpg";
         cv::Mat depthImage = cv::imread(imagePath, -1);
         PointCloudData cloudPoints;
-        std::string yamlFile = item.pointCloud;
-        cv::FileStorage fileStorageRead =  cv::FileStorage(yamlFile, cv::FileStorage::READ);
+//        std::string yamlFile = item.pointCloud;
+        std::string yamlFile = "/media/xin/data1/data/data_2023_11_21/data_2023_11_21_1/20231121_1145/slam_depth/53_1700538353693783_slam_depth.yaml";
+        Show3DPointCloud(yamlFile);
+        cv::FileStorage fileStorageRead = cv::FileStorage(yamlFile, cv::FileStorage::READ);
         cv::Mat imageTT;
         fileStorageRead["depth"] >> imageTT;
         cv::Mat resDepth;
         std::vector<Eigen::Vector3d> pointClouds;
-        GetPointCloud(imageTT,pointClouds);
-        PointCloud2Depth(pointClouds,resDepth,1000,1000);
+        GetPointCloud(imageTT, pointClouds);
+        PointCloud2Depth(pointClouds, resDepth, 800, 400);
 //        size_t lastSlashPos = imagePath.find_last_of("/\\"); // 查找最后一个路径分隔符的位置
 //        std::string fileName = imagePath.substr(lastSlashPos + 1);
 //        std::string imageSave_path = saveDir + "/" + std::to_string(i) + "_" + fileName;
-//        cv::imwrite(imageSave_path,resDepth);
+//        cv::imwrite("/media/xin/data1/test_data/slam_depth_test/0.png",resDepth);
         cv::imshow("image",depthImage);
-        cv::imshow("res",resDepth);
+        cv::imshow("res", resDepth);
         cv::waitKey();
+        break;
     }
     return 0;
 }
+
+
+
+

@@ -21,3 +21,12 @@ set(ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/)
 include(${ROOT_DIR}/cmake/find_yaml.cmake)
 include_directories(${YAML_CPP_INCLUDE_DIR})
 target_link_libraries(cloudpoint2depth ${YAMLCPP_LIBRARY})
+
+
+find_package(PCL 1.2 REQUIRED)
+
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+target_link_libraries (cloudpoint2depth ${PCL_LIBRARIES})
+install(TARGETS cloudpoint2depth RUNTIME DESTINATION bin)
